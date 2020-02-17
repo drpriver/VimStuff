@@ -2,6 +2,8 @@ python3 << endpy
 # this plugin is janky, but good enough!
 # To use, add source ~/.vim/parse_import.py
 # Probably other ways to do it, but whatever!
+# TODO: put this stuff in a module that is then imported to avoid polluting
+# global namespace
 import os
 import vim
 import typing as t
@@ -19,6 +21,7 @@ class Logger:
         if self.out is not None:
             print(*args, **kwargs, file=self.out)
             self.out.flush()
+# Useful for debugging, can do a `tail -f` on the output file in a terminal split
 logger = Logger(None)
 
 class Writer:
@@ -87,7 +90,7 @@ def _parse(s:str, result:t.Dict[str, Imported]) -> None:
     else:
         return
 
-def parse(s:str, result:dict) -> t.Optional[Imported]:
+def parse(s:str, result:dict) -> None:
     try:
         _parse(s, result)
     except:
