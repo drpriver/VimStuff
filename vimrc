@@ -59,15 +59,12 @@ nnoremap <leader><Tab> gt
 nnoremap <leader><S-Tab> gT
 nnoremap <leader>w <c-w><c-w>
 nnoremap <silent> <leader>] :vert term<CR>
-nnoremap <silent> <leader>[ :vert term ++close python3<CR>
-nnoremap <leader>m :make!<CR>
 nnoremap <silent> <leader>s :silent! syntax<space>sync<space>fromstart<CR>:silent! redraw!<CR>:silent! nohlsearch<CR>
 nnoremap g* :execute "vimgrep /\\<" . expand("<cword>") . "\\>/ **/*.c **/*.h **/*.m **/*.cpp **/*.hpp"<CR>
 nnoremap <leader>r :%s/\s\+$//g<cr>
 nnoremap gd gD
 
 nmap <leader>c <Plug>SlimeParagraphSend
-nmap <leader>C <Plug>SlimeConfig
 nnoremap <C-Right> :cn<CR>
 nnoremap <C-Left> :cp<CR>
 
@@ -90,7 +87,7 @@ au BufNewFile,BufReadPost *.fish set filetype=fish
 au FileType fish setlocal sw=4 ts=4 sts=4 et
 au BufNewFile,BufReadPost *.md set filetype=markdown
 au BufNewFile,BufReadPost *.dnd set filetype=dnd
-au BufNewFile,BufReadPost *.tax set filetype=taxonomy
+au BufNewFile,BufReadPost *.tql set filetype=taxonomy
 au FileType taxonomy setlocal et sw=4 ts=4 sts=4
 au FileType markdown setlocal foldexpr=MarkdownLevel() foldmethod=expr ts=2 et
 au FileType d setlocal formatoptions+=orj
@@ -299,13 +296,12 @@ command! CdGit :exec 'cd' fnameescape(fnamemodify(finddir('.git',escape(expand('
 call plug#begin('~/.vim/plugged')
 
 Plug 'ycm-core/YouCompleteMe', { 'do': './install.py --clang-completer' }
-Plug 'tpope/vim-fugitive'
-Plug 'Lenovsky/nuake'
-Plug 'jpalardy/vim-slime'
 " I couldn't get this to work on macos (would timeout on launch of program)
+" It's not that big a deal anyway, I can just use xcode
 " Plug 'puremourning/vimspector', {'do': './install_gadget.py --enable-python'}
 
 " Initialize plugin system
+Plug 'ziglang/zig.vim'
 call plug#end()
 
 "YouCompleteMe junk
@@ -318,6 +314,7 @@ let g:ycm_key_list_select_completion = ['<TAB>', '<Down>']
 let g:ycm_key_list_stop_completion = ['<C-y>', '<CR>']
 let g:ycm_min_num_of_chars_for_completion=8
 let g:ycm_global_ycm_extra_conf='/Users/drpriver/.vim/ycm_extra.py'
+let g:ycm_clangd_args=['--header-insertion=never']
 nnoremap <silent> <c-\> :YcmCompleter GoToImprecise<CR>:silent! foldo!<CR>:silent! redraw!<CR>
 nnoremap <silent> <leader>d :YcmCompleter GoToDefinition<CR>:silent! foldo!<CR>:silent! redraw!<CR>
 nmap <leader>q <plug>(YCMHover)

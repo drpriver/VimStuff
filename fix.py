@@ -10,7 +10,6 @@ def get_visual_selection() -> VisSelection:
     _, start_line, _, _ = start_pos
     end_pos = vim.eval('getpos("\'>")')
     _, end_line, _, _ = end_pos
-    print(type(start_line))
     return VisSelection(int(start_line)-1, int(end_line))
 
 class CurrentLines(NamedTuple):
@@ -110,6 +109,7 @@ def toggle_comments() -> None:
         'vim'        : '"',
         'objc'       : '//',
         'rust'       : '//',
+        'typescript' : '//',
     }
     chars = comment_chars.get(ft, '#')
     if chars is None:
@@ -155,77 +155,19 @@ def _toggle_comments(lines:List[str], comment_chars:str) -> List[str]:
                 new_lines.append(' '* (len(line) - len(stripped)) + comment_chars + ' ' + stripped)
         return new_lines
 
-def toggle_c_comments(lines:List[str]) -> List[str]:
-    new_lines = []
+def css_toggle_comments() -> None:
+    start, end, lines = get_current_lines()
+    fixed = []
     for line in lines:
-        stripped = line.strip()
-        if not stripped:
-            continue
-        if stripped.startswith('//'):
-            comment = True
+        if '/*' in line:
+            fixed.append(line.replace('/*', '').replace('*/',''))
         else:
-            comment = False
-        break
-    else:
-        return lines
+            l = line.lstrip()
+            fixed.append(' '*(len(line)-len(l)) + '/*' + l + '*/')
+    vim.current.buffer[start:end] = fixed
 
-    if comment: # decomment the lines
-        for line in lines:
-            stripped = line.lstrip()
-            if not stripped:
-                new_lines.append(line)
-            elif not stripped.startswith('//'):
-                new_lines.append(line)
-            else:
-                pos = line.find('//')
-                new_lines.append(line[:pos]+line[pos+2:].strip())
-        return new_lines
-    else: # comment the lines
-        for line in lines:
-            stripped = line.lstrip()
-            if not stripped:
-                new_lines.append(line)
-            elif stripped.startswith('//'):
-                new_lines.append(line)
-            else:
-                new_lines.append(' '* (len(line) - len(stripped)) + '// ' + stripped)
-        return new_lines
 
-def toggle_py_comments(lines:List[str]) -> List[str]:
-    new_lines = []
-    for line in lines:
-        stripped = line.strip()
-        if not stripped:
-            continue
-        if stripped.startswith('#'):
-            comment = True
-        else:
-            comment = False
-        break
-    else:
-        return lines
-
-    if comment: # decomment the lines
-        for line in lines:
-            stripped = line.lstrip()
-            if not stripped:
-                new_lines.append(line)
-            elif not stripped.startswith('#'):
-                new_lines.append(line)
-            else:
-                pos = line.find('#')
-                new_lines.append(line[:pos]+line[pos+1:].strip())
-        return new_lines
-    else: # comment the lines
-        for line in lines:
-            stripped = line.lstrip()
-            if not stripped:
-                new_lines.append(line)
-            elif stripped.startswith('#'):
-                new_lines.append(line)
-            else:
-                new_lines.append(' '* (len(line) - len(stripped)) + '# ' + stripped)
-        return new_lines
 endpy
 vmap <leader>e :python3 fixed_lines()<CR>
 vmap <CR> :python3 toggle_comments()<CR>
+vmap <leader><CR> :python3 css_toggle_comments()<CR>
