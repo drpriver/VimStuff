@@ -91,21 +91,22 @@ au BufNewFile,BufReadPost *.tql set filetype=taxonomy
 au FileType taxonomy setlocal et sw=4 ts=4 sts=4
 au FileType markdown setlocal foldexpr=MarkdownLevel() foldmethod=expr ts=2 et
 au FileType d setlocal formatoptions+=orj
-au BufEnter *.py setlocal kp=:python3\ get_py_help()\ #
+au BufEnter *.py setlocal kp=:python3\ parse_import.get_py_help()\ #
 " au BufEnter *.py setlocal kp=:tab\ term\ ++close\ pydoc3
 au BufEnter *.py setlocal makeprg=mypy\ .
 au BufEnter *.txt setlocal tabstop=4
 if &diff
     " au BufEnter *.c,*.d,*.cpp,*.h,*.js,*.py setlocal foldmethod=diff
 else
-    au BufEnter *.c,*.d,*.cpp,*.h,*.js,*.py setlocal foldmethod=indent
+    au BufEnter *.c,*.d,*.cpp,*.h,*.js,*.py,*.m,*.mm,*.ts setlocal foldmethod=indent
 endif
+au BufEnter *.c,*.d,*.cpp,*.h,*.js,*.py,*.m,*.ts setlocal cinkeys-=:
 au BufEnter *.js setlocal sts=4 ts=4 sw=4 et
-au BufEnter *.c,*.d,*.cpp,*.h,*.hpp setlocal ts=4 sw=4 sts=4 et
-au BufEnter *.c,*.d,*.cpp,*.h,*.hpp setlocal cindent
-au BufEnter *.c,*.d,*.cpp,*.h,*.hpp setlocal cindent cino=}1s,l1,L0
-au BufEnter *.c,*.h syn keyword cStatement attempt Raise attempt_void unwrap force ignore_error or and not unpack assert
-au BufEnter *.c,*.h syn keyword cType let Errorable Errorable_f small_enum tuple Nonnull Nullable warn_unused NullUnspec force_inline
+au BufEnter *.c,*.d,*.cpp,*.h,*.hpp,*.m,*.ts setlocal ts=4 sw=4 sts=4 et
+au BufEnter *.c,*.cpp,*.h,*.hpp setlocal cindent
+au BufEnter *.c,*.cpp,*.h,*.hpp setlocal cindent cino=l1,L0
+au BufEnter *.c,*.h syn keyword cStatement assert
+au BufEnter *.c,*.h syn keyword cType Nonnull Nullable warn_unused NullUnspec force_inline
 au BufEnter *.vim,*.vimrc setlocal ts=4 sw=4 sts=4 et
 au BufEnter *.py syn keyword pythonBuiltin List Iterable Optional Tuple Type Dict Set Union NamedTuple
 
@@ -135,6 +136,8 @@ hi StatusLineTerm ctermbg=0
 hi EndOfBuffer ctermfg=0
 hi Search ctermbg=16 ctermfg=12
 hi PMenu ctermbg=0 ctermfg=none
+
+let g:python_no_builtin_highlight=1
 
 let g:netrw_liststyle=3
 let g:netrw_banner=0
@@ -214,8 +217,26 @@ function! MarkdownLevel()
   endif
 endfunction
 
-source ~/.vim/fix.py
-source ~/.vim/parse_import.py
+" Python modules
+python3 << endpy
+import sys
+import os
+sys.path.append(os.path.expanduser('~/.vim'))
+import fix
+import parse_import
+import dnd_outline
+endpy
+
+
+vmap <leader>e :python3 fix.fixed_lines()<CR>
+vmap <CR> :python3 fix.toggle_comments()<CR>
+vmap <leader><CR> :python3 fix.css_toggle_comments()<CR>
+function! g:DndOutLineGoToNode()
+    :python3 dnd_outline.current_outline.select()
+endfunction
+
+" [o]utline is the mnemonic
+nnoremap <leader>o :python3 dnd_outline.toggle()<CR>
 
 function MyFilter(winid, key)
     if mode()[0] == 'c'
@@ -315,7 +336,8 @@ let g:ycm_key_list_stop_completion = ['<C-y>', '<CR>']
 let g:ycm_min_num_of_chars_for_completion=8
 let g:ycm_global_ycm_extra_conf='/Users/drpriver/.vim/ycm_extra.py'
 let g:ycm_clangd_args=['--header-insertion=never']
-nnoremap <silent> <c-\> :YcmCompleter GoToImprecise<CR>:silent! foldo!<CR>:silent! redraw!<CR>
+let g:ycm_disable_for_files_larger_than_kb=2000
+nnoremap <silent> <c-\> :YcmCompleter GoTo<CR>:silent! foldo!<CR>:silent! redraw!<CR>
 nnoremap <silent> <leader>d :YcmCompleter GoToDefinition<CR>:silent! foldo!<CR>:silent! redraw!<CR>
 nmap <leader>q <plug>(YCMHover)
 
@@ -326,5 +348,36 @@ function g:Novel()
     set bg=light
     hi PMenu ctermbg=15
     hi Search ctermbg=3
+    hi StatusLine ctermfg=0 ctermbg=none cterm=italic
+    hi StatusLineNC ctermfg=0 ctermbg=none cterm=none
+    hi TermLine ctermbg=none ctermfg=0
+    hi TermLineNc ctermbg=none ctermfg=0 cterm=italic
+    hi StatusLineTermNc ctermbg=none
+    hi StatusLineTerm ctermbg=none
+    hi PreProc ctermfg=91
+    hi CPreProc ctermfg=91
+    hi cFunction ctermfg=124
+    hi Comment ctermfg=0 cterm=italic
+    hi Statement ctermfg=0
+    hi Identifier ctermfg=27
+    hi Type ctermfg=27
     return 0
 endfunction
+
+function g:Dark()
+    set bg=dark
+    hi PMenu ctermbg=0 ctermfg=none
+    hi Search ctermbg=16 ctermfg=12
+    hi StatusLine cterm=none ctermfg=14 ctermbg=0
+    hi StatusLineNC ctermfg=6 ctermbg=0 cterm=none
+    return 0
+endfunction
+
+if $LIGHTMODE == "1"
+    call Novel()
+else
+    call Dark()
+end
+let &t_SI = "\<Esc>[6 q"
+let &t_SR = "\<Esc>[4 q"
+let &t_EI = "\<Esc>[2 q"
