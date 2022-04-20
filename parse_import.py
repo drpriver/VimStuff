@@ -1,4 +1,3 @@
-python3 << endpy
 # this plugin is janky, but good enough!
 import os
 import vim
@@ -159,5 +158,3 @@ def get_py_help():
         print("Couldn't get help for:", tok)
     else:
         vim.command(cmd)
-
-endpy

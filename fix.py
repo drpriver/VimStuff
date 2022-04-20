@@ -1,10 +1,9 @@
-python3 << endpy
+import vim
 from typing import List, NamedTuple
 class VisSelection(NamedTuple):
     start_line: int
     end_line: int
 
-import vim
 def get_visual_selection() -> VisSelection:
     start_pos = vim.eval('getpos("\'<")')
     _, start_line, _, _ = start_pos
@@ -94,8 +93,9 @@ def fixed_lines() -> None:
     vim.current.buffer[start:end] = fixed
 
 def toggle_comments() -> None:
-    start, end, lines = get_current_lines()
     ft = get_ft()
+    if ft == 'css': return css_toggle_comments()
+    start, end, lines = get_current_lines()
     comment_chars = {
         'python'     : '#',
         'c'          : '//',
@@ -110,6 +110,7 @@ def toggle_comments() -> None:
         'objc'       : '//',
         'rust'       : '//',
         'typescript' : '//',
+        'ds'         : '//',
     }
     chars = comment_chars.get(ft, '#')
     if chars is None:
@@ -165,9 +166,3 @@ def css_toggle_comments() -> None:
             l = line.lstrip()
             fixed.append(' '*(len(line)-len(l)) + '/*' + l + '*/')
     vim.current.buffer[start:end] = fixed
-
-
-endpy
-vmap <leader>e :python3 fixed_lines()<CR>
-vmap <CR> :python3 toggle_comments()<CR>
-vmap <leader><CR> :python3 css_toggle_comments()<CR>
