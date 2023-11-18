@@ -38,8 +38,19 @@ def fix_alignment_char(text:List[str], char:str) -> List[str]:
             new_text.append(t.rstrip())
             continue
         head, *tail = t.split(char)
-        h = head.rstrip().ljust(equals_alignment)
-        new_text.append((head.rstrip().ljust(equals_alignment) + (f' {char} ' + (char.join(tail)).strip() if tail else '')).rstrip())
+        if char == ':':
+            if tail:
+                h = (head.rstrip() + ':').ljust(equals_alignment+1)
+            else:
+                h = head.rstrip()
+            h += ' '
+        else:
+            if tail:
+                h = head.rstrip().ljust(equals_alignment) + ' ' + char
+            else:
+                h = head.rstrip()
+            h += ' '
+        new_text.append((h + char.join(tail).strip()).rstrip())
     return new_text
 
 def fix_alignment_all_char(text:List[str], char:str) -> List[str]:

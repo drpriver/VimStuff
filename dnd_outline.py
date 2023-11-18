@@ -1,3 +1,10 @@
+"""
+This provides an "outline" buffer on the left hand side. It does not
+auto-update, but you can toggle it to get an update.
+
+For python and dnd, we parse the ast directly.
+For other languages, we use the local tag files.
+"""
 import vim
 import os
 import ast
@@ -12,8 +19,8 @@ class Loc(NamedTuple):
         bullet = '•‣⁃••••••••••••••••••••••••••••••••••'[self.depth]
         return ' '+self.depth*2*' '+bullet+' '+self.header
 
-def is_supported():
-    return vim.eval('&ft') in {'dnd', 'python'} or os.path.isfile('tags')
+def is_supported() -> bool:
+    return vim.eval('&ft') in {'dnd', 'python', 'typescript'} or os.path.isfile('tags')
 
 current_outline: Optional['OutLine'] = None
 disabled = True
@@ -42,8 +49,7 @@ def toggle() -> None:
 def dnd_outline() -> List[Loc]:
     import pydndc # type: ignore
     def get_loc(n:pydndc.Node, depth:int) -> Optional[Loc]:
-        id = n.id
-        if not id: return None
+        if not n.id: return None
         if not n.header: return None
         return Loc(depth, n.header, n.location.row)
 
@@ -56,13 +62,10 @@ def dnd_outline() -> List[Loc]:
             result.extend(get_locs(child, depth+1 if loc is not None else depth))
         return result
     ctx = pydndc.Context()
+    ctx.logger = pydndc.stderr_logger
     cb: vim.Buffer = vim.current.buffer
     text = '\n'.join(cb)
-    try:
-        ctx.root.parse(text)
-    except Exception as e:
-        print(*ctx.errors, file=sys.stderr, sep='\n')
-        raise
+    ctx.root.parse(text)
     locs = get_locs(ctx.root, 0)
     return locs
 
@@ -99,6 +102,34 @@ def py_outline() -> List[Loc]:
             locs.extend(get_locs(n, 0))
     return locs
 
+def ts_outline() -> List[Loc]:
+    import re
+    IDENT = r'\b([A-Za-z0-9_]+)\b'
+    RE = re.compile(r'\b(const\senum|function|type|enum|TAG|(^(let|const|var)))\b\s?'+IDENT)
+    locs = []
+    indent = 0
+    depth = 0
+    def analyze_line(lineno:int, line:str) -> None:
+        nonlocal indent
+        nonlocal depth
+        matches = re.finditer(RE, line)
+        lineindent = len(line) - len(line.lstrip())
+        for m in matches:
+            if not lineindent:
+                indent = 0
+                depth = 0
+            elif lineindent > indent:
+                indent = lineindent
+                depth += 1
+            elif lineindent < indent:
+                indent = lineindent
+                depth -= 1
+
+            locs.append(Loc(depth, m[4], lineno))
+    for lineno, line in enumerate(vim.current.buffer):
+        analyze_line(lineno+1, line)
+    return locs
+
 def outline() -> None:
     if disabled: return
     global current_outline
@@ -111,7 +142,11 @@ def outline() -> None:
     if not is_supported(): return
     try:
         ft = vim.eval('&ft')
-        func = {'dnd':dnd_outline, 'python':py_outline}.get(ft, tag_outline)
+        func = {
+            'dnd':dnd_outline, 
+            'python':py_outline, 
+            'typescript':ts_outline,
+        }.get(ft, tag_outline)
         locs = func()
     except Exception as e:
         print(e)
@@ -171,4 +206,19 @@ class OutLine:
         vim.command(f"call win_execute({self.thiswinid}, 'close')")
         vim.command(f'call win_gotoid({self.winid})')
 
+# Add this to your .vimrc or whatever
+r'''
+python3 << endpy
+import sys
+import os
+sys.path.append(os.path.expanduser('~/.vim'))
+import dnd_outline
+endpy
 
+function! g:DndOutLineGoToNode()
+    :python3 dnd_outline.current_outline.select()
+endfunction
+
+" [o]utline is the mnemonic
+nnoremap <leader>o :python3 dnd_outline.toggle()<CR>
+'''

@@ -20,6 +20,13 @@ set wildignore+=**/DWARF/**
 set wildignore+=*.png
 set wildignore+=*.jpg
 set wildignore+=*.pdf
+set wildignore+=*.so
+set wildignore+=*.dylib
+set wildignore+=*.o
+set wildignore+=*.exe
+set wildignore+=*.lib
+set wildignore+=*.dll
+set wildignore+=*.egg-info
 set noshowcmd
 set autoread
 set autoindent
@@ -60,9 +67,9 @@ nnoremap <leader><S-Tab> gT
 nnoremap <leader>w <c-w><c-w>
 nnoremap <silent> <leader>] :vert term<CR>
 nnoremap <silent> <leader>s :silent! syntax<space>sync<space>fromstart<CR>:silent! redraw!<CR>:silent! nohlsearch<CR>
-nnoremap g* :execute "vimgrep /\\<" . expand("<cword>") . "\\>/ **/*.c **/*.h **/*.m **/*.cpp **/*.hpp"<CR>
-nnoremap <leader>r :%s/\s\+$//g<cr>
-nnoremap gd gD
+nnoremap g* :execute "Grep -w " . expand("<cword>") <CR>
+nnoremap <leader>r :%s/\s\+$//g<cr>:silent! syntax<space>sync<space>fromstart<CR>:silent! redraw!<CR>:silent! nohlsearch<CR>
+
 
 nmap <leader>c <Plug>SlimeParagraphSend
 nnoremap <C-Right> :cn<CR>
@@ -88,6 +95,7 @@ au FileType fish setlocal sw=4 ts=4 sts=4 et
 au BufNewFile,BufReadPost *.md set filetype=markdown
 au BufNewFile,BufReadPost *.dnd set filetype=dnd
 au BufNewFile,BufReadPost *.tql set filetype=taxonomy
+au BufNewFile,BufReadPost *.dep set filetype=make
 au FileType taxonomy setlocal et sw=4 ts=4 sts=4
 au FileType markdown setlocal foldexpr=MarkdownLevel() foldmethod=expr ts=2 et
 au FileType d setlocal formatoptions+=orj
@@ -103,6 +111,7 @@ endif
 au BufEnter *.c,*.d,*.cpp,*.h,*.js,*.py,*.m,*.ts setlocal cinkeys-=:
 au BufEnter *.js setlocal sts=4 ts=4 sw=4 et
 au BufEnter *.c,*.d,*.cpp,*.h,*.hpp,*.m,*.ts setlocal ts=4 sw=4 sts=4 et
+au BufEnter *.ts setlocal errorformat=%+A\ %#%f\ %#(%l\\\,%c):\ %m,%C%m
 au BufEnter *.c,*.cpp,*.h,*.hpp setlocal cindent
 au BufEnter *.c,*.cpp,*.h,*.hpp setlocal cindent cino=l1,L0
 au BufEnter *.c,*.h syn keyword cStatement assert
@@ -225,6 +234,7 @@ sys.path.append(os.path.expanduser('~/.vim'))
 import fix
 import parse_import
 import dnd_outline
+import debug
 endpy
 
 
@@ -323,6 +333,10 @@ Plug 'ycm-core/YouCompleteMe', { 'do': './install.py --clang-completer' }
 
 " Initialize plugin system
 Plug 'ziglang/zig.vim'
+if has('macunix')
+    Plug 'rizzatti/dash.vim'
+endif
+
 call plug#end()
 
 "YouCompleteMe junk
@@ -336,14 +350,13 @@ let g:ycm_key_list_stop_completion = ['<C-y>', '<CR>']
 let g:ycm_min_num_of_chars_for_completion=8
 let g:ycm_global_ycm_extra_conf='/Users/drpriver/.vim/ycm_extra.py'
 let g:ycm_clangd_args=['--header-insertion=never']
-let g:ycm_disable_for_files_larger_than_kb=2000
+let g:ycm_disable_for_files_larger_than_kb=8000
+
 nnoremap <silent> <c-\> :YcmCompleter GoTo<CR>:silent! foldo!<CR>:silent! redraw!<CR>
+nnoremap <silent> <leader>a :YcmCompleter GoToAlternateFile<CR>
 nnoremap <silent> <leader>d :YcmCompleter GoToDefinition<CR>:silent! foldo!<CR>:silent! redraw!<CR>
 nmap <leader>q <plug>(YCMHover)
 
-"Vimspector junk
-" let g:vimspector_enable_mappings = 'HUMAN'
-" command! -nargs=0 Debug :call vimspector#Launch()
 function g:Novel()
     set bg=light
     hi PMenu ctermbg=15
@@ -381,3 +394,19 @@ end
 let &t_SI = "\<Esc>[6 q"
 let &t_SR = "\<Esc>[4 q"
 let &t_EI = "\<Esc>[2 q"
+let g:vim_json_warnings = 0
+
+let g:netrw_silent = 1
+
+function g:Tapi_open(_, arglist)
+    let l:current_win = win_getid()
+    python3 debug.set_dbg()
+    exe "1wincmd w"
+    exe "silent! edit " . a:arglist[0]
+    exe "silent! " . a:arglist[1]
+    setlocal cursorline
+    setlocal cursorlineopt=number
+    normal! zR
+    normal! zz
+    call win_gotoid(l:current_win)
+endfunction
