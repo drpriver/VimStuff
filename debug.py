@@ -1,3 +1,4 @@
+from __future__ import annotations
 import vim
 import os
 import re
@@ -32,17 +33,19 @@ def get_visual_selection() -> str:
     txt = cb[start:end]
     if end - start == 1:
         return txt[0][int(start_col)-1:int(end_col)]
-    begin = txt[0][int(start-col)-1:]
-    end = txt[-1][:int(end_col)]
+    begin = txt[0][int(start_col)-1:]
+    ending = txt[-1][:int(end_col)]
     if len(txt) > 2:
         mid = '\n'.join(txt[1:-2])
     else:
         mid = ''
-    return begin + ' ' + mid + ' ' + end
+    return begin + ' ' + mid + ' ' + ending
 
 class DebugState:
     def __init__(self, bufid:int) -> None:
         self.bufid = bufid
+        self.dbg_line_buf: int|None = None
+        self.dbg_line: int|None = None
 
     def set_breakpoint(self) -> None:
         loc = get_current_location()
@@ -122,8 +125,29 @@ class DebugState:
         if vim.eval('&ft') == 'python':
             cmd = f'call term_sendkeys({self.bufid}, "die\\<Enter>")'
         else:
-            cmd = f'call term_sendkeys({self.bufid}, "q\\<Enter>")'
+            cmd = f'call term_sendkeys({self.bufid}, "q\\<Enter>\\<Enter>")'
         vim.command(cmd)
+        self.remove_dbgline()
+
+    def remove_dbgline(self) -> None:
+        if self.dbg_line is None:
+            return
+        cmd = f"call prop_remove({{'type':'dbgline', 'bufnr':{self.dbg_line_buf}}}, {self.dbg_line}, {self.dbg_line})"
+        vim.command(cmd)
+        self.dbg_line = None
+        self.dbg_line_buf = None
+
+    def set_dbgline(self) -> None:
+        cb = vim.current.buffer
+        cw = vim.current.window
+        pos = cw.cursor
+        line = pos[0]
+        self.dbg_line = line
+        self.dbg_line_buf = cb.number
+        cmd=f"call prop_add({line}, 1, {{'type':'dbgline', 'length':8}})"
+        # print(cmd)
+        vim.command(cmd)
+
 
 
 
@@ -131,9 +155,15 @@ state = None
 
 def set_dbg() -> None:
     global state
-    if state: return
+    if state:
+        state.remove_dbgline()
+        return
     setup_mappings()
     state = DebugState(vim.current.buffer.number)
+
+def set_dbgline() -> None:
+    if not state: return
+    state.set_dbgline()
 
 def setup_mappings() -> None:
     vim.command('nnoremap <silent> a :python3 debug.set_breakpoint()<CR>')
@@ -233,6 +263,9 @@ def stepout() -> None:
 def trace() -> None:
     if not state: return
     state.trace()
+
+vim.command('hi DBGLINE term=underline cterm=underline gui=underline')
+vim.command("call prop_type_add('dbgline', {'combine':v:true, 'highlight':'DBGLINE'})")
 
 
 # add to your vimrc
